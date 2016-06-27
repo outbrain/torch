@@ -13,14 +13,13 @@ setup(name='torch',
       include_package_data=False,
       zip_safe=True,
       install_requires=[
-          'webob',
+          'WebOb',
           'python-consul',
           'gevent',
           'prometheus_client',
       ],
-      entry_points={
-        'console_scripts': {
-          'torch': 'torch.__main__:main'
-        }
-      }
+      entry_points="""
+      [console_scripts]
+      torch = torch.__main__:main
+      """
       )
