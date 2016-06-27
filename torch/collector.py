@@ -26,7 +26,10 @@ class PrometheusMetricCollector(object):
 		try:
 			metric = self.metrics[(klass, body['name'])]
 		except KeyError:
-			metric = klass(body['name'], body['description'], body['labels'].keys())
+			if klass is Histogram and 'buckets' in body:
+				metric = klass(body['name'], body['description'], body['labels'].keys(), buckets=body['buckets'])
+			else:
+				metric = klass(body['name'], body['description'], body['labels'].keys())
 			self.metrics[(klass, body['name'])] = metric
 
 		try:
