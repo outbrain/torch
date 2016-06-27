@@ -1,14 +1,11 @@
-import os
-from gevent.monkey import patch_all
-patch_all()
-from gevent import wsgi
-
-# from .discovery import ConsulHandler
-from .multi_app import MultiApp
-from .collector import PrometheusMetricCollector
-from .discovery import ConsulHandler, Service
-
 def main():
+	from gevent.monkey import patch_all
+	patch_all()
+	import os
+	from gevent import wsgi
+	from .multi_app import MultiApp
+	from .collector import PrometheusMetricCollector
+	from .discovery import ConsulHandler, Service
 	class QuietWSGIHandler(wsgi.WSGIHandler):
 		"""WSGIHandler subclass that will not create an access log"""
 		def log_request(self, *args):
