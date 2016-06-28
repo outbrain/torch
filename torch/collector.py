@@ -4,6 +4,7 @@ from prometheus_client import generate_latest, REGISTRY, Counter, Gauge, Summary
 class PrometheusMetricCollector(object):
 	def __init__(self, prefix=''):
 		self.routes = {
+			prefix: self.report,
 			prefix+'/': self.report,
 			prefix+'/counter': self.counter,
 			prefix+'/gauge/inc': self.gauge_inc,
