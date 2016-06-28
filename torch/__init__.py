@@ -28,7 +28,7 @@ def main():
 	application.add_application(metrics_prefix, metric_app)
 	application.add_application(consul_prefix, consul_app)
 
-	httpd = wsgi.WSGIServer(('', port), application, handler_class=QuietWSGIHandler)
+	httpd = wsgi.WSGIServer(('0.0.0.0', port), application, handler_class=QuietWSGIHandler)
 	try:
 		httpd.serve_forever()
 	except:
