@@ -18,8 +18,8 @@ class ConsulHandler(object):
 
 class Service(object):
 	"""Represents a service registered or prepared to register with Consul"""
-	def __init__(self, port, health_check, owner, service_type='pyapp'):
-		self.name = 'metricproxy'
+	def __init__(self, port, health_check, owner, service_type):
+		self.name = service_type
 		self.owner = owner
 		self.health_check = health_check
 		self.service_type = service_type
