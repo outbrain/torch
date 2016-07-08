@@ -14,7 +14,6 @@ setup(name='torch',
       zip_safe=True,
       install_requires=[
           'WebOb',
-          'python-consul',
           'gevent',
           'prometheus_client',
       ],

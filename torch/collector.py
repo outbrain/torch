@@ -1,4 +1,5 @@
 from webob import exc
+from webob.dec import wsgify
 from prometheus_client import generate_latest, REGISTRY, Counter, Gauge, Summary, Histogram
 
 class PrometheusMetricCollector(object):
@@ -15,6 +16,7 @@ class PrometheusMetricCollector(object):
 		}
 		self.metrics = {}
 
+	@wsgify
 	def __call__(self, request):
 		try:
 			route = self.routes[request.path_info]
