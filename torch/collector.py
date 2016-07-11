@@ -30,42 +30,65 @@ class PrometheusMetricCollector(object):
 			metric_family = self.metric_registry.add_metric(klass, body['name'], body['description'], buckets=body['buckets'])
 		else:
 			metric_family = self.metric_registry.add_metric(klass, body['name'], body['description'])
-		return metric_family.labels(body['labels'])
+		try:
+			metric = metric_family.labels(body['labels'])
+		except TypeError as ex:
+			raise ValueError(ex)
+		else:
+			return metric
 
 	def counter(self, request):
 		body = request.json_body
-		metric = self.metric_from_request(Counter, body)
-		metric.inc(body['value'])
+		try:
+			metric = self.metric_from_request(Counter, body)
+			metric.inc(body['value'])
+		except ValueError as ex:
+			raise exc.HTTPBadRequest(body=str(ex))
 		return exc.HTTPOk()
 
 	def gauge_inc(self, request):
 		body = request.json_body
-		metric = self.metric_from_request(Gauge, body)
-		metric.inc(body['value'])
+		try:
+			metric = self.metric_from_request(Gauge, body)
+			metric.inc(body['value'])
+		except ValueError as ex:
+			raise exc.HTTPBadRequest(body=str(ex))
 		return exc.HTTPOk()
 
 	def gauge_dec(self, request):
 		body = request.json_body
-		metric = self.metric_from_request(Gauge, body)
-		metric.dec(body['value'])
+		try:
+			metric = self.metric_from_request(Gauge, body)
+			metric.dec(body['value'])
+		except ValueError as ex:
+			raise exc.HTTPBadRequest(body=str(ex))
 		return exc.HTTPOk()
 
 	def gauge_set(self, request):
 		body = request.json_body
-		metric = self.metric_from_request(Gauge, body)
-		metric.set(body['value'])
+		try:
+			metric = self.metric_from_request(Gauge, body)
+			metric.set(body['value'])
+		except ValueError as ex:
+			raise exc.HTTPBadRequest(body=str(ex))
 		return exc.HTTPOk()
 
 	def summary(self, request):
 		body = request.json_body
-		metric = self.metric_from_request(Summary, body)
-		metric.observe(body['value'])
+		try:
+			metric = self.metric_from_request(Summary, body)
+			metric.observe(body['value'])
+		except ValueError as ex:
+			raise exc.HTTPBadRequest(body=str(ex))
 		return exc.HTTPOk()
 
 	def histogram(self, request):
 		body = request.json_body
-		metric = self.metric_from_request(Histogram, body)
-		metric.observe(body['value'])
+		try:
+			metric = self.metric_from_request(Histogram, body)
+			metric.observe(body['value'])
+		except ValueError as ex:
+			raise exc.HTTPBadRequest(body=str(ex))
 		return exc.HTTPOk()
 
 	def report(self, request):
