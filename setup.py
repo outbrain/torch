@@ -15,7 +15,6 @@ setup(name='torch',
       install_requires=[
           'WebOb',
           'gevent',
-          'prometheus_client',
       ],
       entry_points="""
       [console_scripts]

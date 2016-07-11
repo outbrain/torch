@@ -1,6 +1,6 @@
 from webob import exc
 from webob.dec import wsgify
-from prometheus_client import generate_latest, REGISTRY, Counter, Gauge, Summary, Histogram
+from .prometheus import Registry, Counter, Gauge, Summary, Histogram
 
 class PrometheusMetricCollector(object):
 	def __init__(self, prefix=''):
@@ -14,7 +14,7 @@ class PrometheusMetricCollector(object):
 			prefix+'/summary': self.summary,
 			prefix+'/histogram': self.histogram
 		}
-		self.metrics = {}
+		self.metric_registry = Registry()
 
 	@wsgify
 	def __call__(self, request):
@@ -26,19 +26,11 @@ class PrometheusMetricCollector(object):
 			return route(request)
 
 	def metric_from_request(self, klass, body):
-		try:
-			metric = self.metrics[(klass, body['name'])]
-		except KeyError:
-			if klass is Histogram and 'buckets' in body:
-				metric = klass(body['name'], body['description'], body['labels'].keys(), buckets=body['buckets'])
-			else:
-				metric = klass(body['name'], body['description'], body['labels'].keys())
-			self.metrics[(klass, body['name'])] = metric
-
-		try:
-			return metric.labels(body['labels']) # pylint:disable=E1101
-		except ValueError:
-			raise exc.HTTPBadRequest('bad or missing labels')
+		if klass is Histogram and 'buckets' in body:
+			metric_family = self.metric_registry.add_metric(klass, body['name'], body['description'], buckets=body['buckets'])
+		else:
+			metric_family = self.metric_registry.add_metric(klass, body['name'], body['description'])
+		return metric_family.labels(body['labels'])
 
 	def counter(self, request):
 		body = request.json_body
@@ -78,6 +70,6 @@ class PrometheusMetricCollector(object):
 
 	def report(self, request):
 		headers = [('Content-type', 'text/plain; version=0.0.4; charset=utf-8')]
-		response = exc.HTTPOk(headers=headers, body=generate_latest(REGISTRY))
+		response = exc.HTTPOk(headers=headers, body=self.metric_registry.render())
 		return response
 
