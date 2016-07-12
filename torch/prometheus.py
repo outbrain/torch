@@ -172,7 +172,7 @@ class Registry(dict):
 		super(Registry, self).__setitem__(key, value)
 
 	def render(self):
-		return '\n'.join(metric.render() for metric in self.itervalues())
+		return'{}\n'.format('\n'.join(metric.render() for metric in self.itervalues()))
 
 	def add_metric(self, klass, name, description, **kwargs):
 		return self.setdefault((klass, name), MetricFamily(klass, name, description, **kwargs))
