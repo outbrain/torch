@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='torch',
-      version='0.3',
+      version='0.3.1',
       description="Prometheus aggregator",
       long_description="""A Prometheus aggregator which registers with Consul for discovery purposes""",
       classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
