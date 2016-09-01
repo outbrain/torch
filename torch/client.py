@@ -1,5 +1,8 @@
+import logging
 import json
 import urllib2
+
+LOG = logging.getLogger(__name__)
 
 class UndefinedMetric(Exception):
 	pass
@@ -27,9 +30,17 @@ class MetricsClient(object):
 	def _make_request(self, path, metric):
 		data = json.dumps(metric)
 		req = urllib2.Request(self.torch_url+path, data, {'Content-Type': 'application/json', 'Content-Length': len(data)})
-		f = urllib2.urlopen(req)
-		f.read()
-		f.close()
+		try:
+			f = urllib2.urlopen(req)
+		except urllib2.HTTPError as ex:
+			message = ex.read()
+			ex.close()
+			LOG.warning('Failed to post metrics: %s', message)
+		except urllib2.URLError as ex:
+			LOG.warning('Failed to post metrics: %s', ex)
+		else:
+			f.read()
+			f.close()
 
 	def inc_counter(self, name, labels, amount=1):
 		metric = self._get_metric(name)
