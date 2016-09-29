@@ -11,9 +11,9 @@ def main():
 			pass
 
 	port = int(os.environ['SERVICE_PORT'])
-
+	ttl = timedelta(hours=int(os.environ.get('TORCH_TTL', 24)))
 	metrics_prefix = '/metrics'
-	ttl = timedelta(hours=24)
+
 	application = PrometheusMetricCollector(prefix=metrics_prefix, ttl=ttl)
 
 	httpd = wsgi.WSGIServer(('0.0.0.0', port), application, handler_class=QuietWSGIHandler)

@@ -6,6 +6,8 @@ Torch is a web application meant to fill in for a use case the the Prometheus Pu
 
 Install the torch python package. It will create a script named torch. You must set the port for torch to run on by setting the environment variable `SERVICE_PORT`
 
+By default a metric/label combination which has not been updated will be removed after 24 hours.  Set the environment variable `TORCH_TTL` to change the number of hours to wait before cleaning up old metrics.
+
 ###Usage
 
     SERVICE_PORT=9092 torch
