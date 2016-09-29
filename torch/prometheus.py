@@ -1,4 +1,5 @@
 import math
+import datetime
 from collections import OrderedDict
 
 _INF = float('inf')
@@ -48,7 +49,7 @@ class Metric(object):
 		value = self.format_value(value)
 		return '{name}{labels} {value}'.format(name=name, labels=labels, value=value)
 
-	def render(self):
+	def render(self): # pragma: nocover
 		raise NotImplementedError('render')
 
 class Counter(Metric):
@@ -145,6 +146,7 @@ class MetricFamily(object):
 		self.name = name
 		self.description = description
 		self.metrics = {}
+		self.metric_seen = {}
 
 	def labels(self, key):
 		labels = Metric.normalize_labels(key)
@@ -152,13 +154,23 @@ class MetricFamily(object):
 			metric = self.metrics[labels]
 		except KeyError:
 			metric = self.metrics[labels] = self.klass(self.name, labels, **self.kwargs)
+		self.metric_seen[labels] = datetime.datetime.utcnow()
 		return metric
+
+	def cleanup(self, ttl):
+		if ttl:
+			now = datetime.datetime.utcnow()
+			for label in self.metric_seen.keys():
+				if now - self.metric_seen[label] > ttl:
+					del self.metric_seen[label]
+					del self.metrics[label]
 
 	def render(self):
 		results = [
 			'# HELP {} {}'.format(self.name, self.description),
 			'# TYPE {} {}'.format(self.name, self.klass.type_)
 		]
+
 		for metric in self.metrics.itervalues():
 			metric_txt = metric.render()
 			results.append(metric_txt)
@@ -166,13 +178,22 @@ class MetricFamily(object):
 		return '\n'.join(results)
 
 class Registry(dict):
+	def __init__(self, ttl=None):
+		super(Registry, self).__init__()
+		if ttl is not None and not isinstance(ttl, datetime.timedelta):
+			raise ValueError('invalid ttl value: {!r}'.format(ttl))
+		self.ttl = ttl
+
 	def __setitem__(self, key, value):
-		if key in self and self[key][0].klass != value.klass:
+		if key in self and self[key].klass != value.klass:
 			raise ValueError('metric type conflict')
 		super(Registry, self).__setitem__(key, value)
 
 	def render(self):
-		return'{}\n'.format('\n'.join(metric.render() for metric in self.itervalues()))
+		results = '{}\n'.format('\n'.join(metric.render() for metric in self.itervalues()))
+		for metric in self.itervalues():
+			metric.cleanup(self.ttl)
+		return results
 
 	def add_metric(self, klass, name, description, **kwargs):
 		return self.setdefault((klass, name), MetricFamily(klass, name, description, **kwargs))

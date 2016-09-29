@@ -1,4 +1,6 @@
 import unittest
+import datetime
+import mock
 
 from torch.prometheus import (
 	Metric,
@@ -9,8 +11,6 @@ from torch.prometheus import (
 	Registry,
 	MetricFamily
 	)
-
-# TODO: test render of Histogram and Summary
 
 class TestMetric(unittest.TestCase):
 	def test_normalize_labels(self):
@@ -53,6 +53,13 @@ class TestCounter(unittest.TestCase):
 	def test_negative_increment_raises(self):
 		self.assertRaises(ValueError, self.counter.inc, -1)
 
+	def test_render(self):
+		self.counter.inc()
+		self.assertEquals(
+			'c{foo="bar"} 1.0',
+			self.counter.render()
+		)
+
 class TestGauge(unittest.TestCase):
 	def setUp(self):
 		self.gauge = Gauge('g', {'foo': 'bar'})
@@ -66,6 +73,14 @@ class TestGauge(unittest.TestCase):
 		self.gauge.set(9)
 		self.assertEqual(9, self.gauge.value)
 
+	def test_render(self):
+		self.gauge.inc()
+		self.assertEquals(
+			'g{foo="bar"} 1.0',
+			self.gauge.render()
+		)
+
+
 class TestSummary(unittest.TestCase):
 	def setUp(self):
 		self.summary = Summary('s', {'foo': 'bar'})
@@ -76,6 +91,14 @@ class TestSummary(unittest.TestCase):
 		self.summary.observe(10)
 		self.assertEqual(1, self.summary.count)
 		self.assertEqual(10, self.summary.sum)
+
+	def test_render(self):
+		self.summary.observe(1)
+		self.assertEquals(
+			's_count{foo="bar"} 1.0\n'
+			's_sum{foo="bar"} 1.0',
+			self.summary.render()
+		)
 
 class TestHistogram(unittest.TestCase):
 	def setUp(self):
@@ -123,6 +146,20 @@ class TestHistogram(unittest.TestCase):
 		self.assertRaises(ValueError, Histogram, 'h', {'foo': 'bar'}, buckets=[])
 		self.assertRaises(ValueError, Histogram, 'h', {'foo': 'bar'}, buckets=[float("inf")])
 
+	def test_render(self):
+		h = Histogram('h', {'foo': 'bar'}, buckets=[0, 1, 2])
+		h.observe(1)
+		self.assertEquals(
+			'h_count{foo="bar"} 1.0\n'
+			'h_sum{foo="bar"} 1.0\n'
+			'h_bucket{foo="bar",le="0"} 0.0\n'
+			'h_bucket{foo="bar",le="1"} 1.0\n'
+			'h_bucket{foo="bar",le="2"} 1.0\n'
+			'h_bucket{foo="bar",le="inf"} 1.0',
+			h.render()
+		)
+
+
 class TestMetricFamily(unittest.TestCase):
 	def setUp(self):
 		self.family = MetricFamily(Counter, 'foo', 'test counter')
@@ -152,6 +189,26 @@ class TestMetricFamily(unittest.TestCase):
 		self.assertEquals(render_lines[0], '# HELP foo test counter')
 		self.assertEquals(render_lines[1], '# TYPE foo counter')
 
+	def test_metric_seen(self):
+		label = Metric.normalize_labels({'foo': 'bar'})
+		self.assert_(label not in self.family.metric_seen)
+
+		# metric_seen is updated when Metric retrieved from MetricFamily.labels
+		self.family.labels(label).inc(2)
+		self.assert_(label in self.family.metric_seen)
+
+		# metric not removed if ttl not exceeded
+		self.family.cleanup(datetime.timedelta(days=1))
+		self.assert_(label in self.family.metric_seen)
+
+		now = datetime.datetime.utcnow()
+		with mock.patch('datetime.datetime') as mock_datetime:
+			mock_datetime.utcnow.return_value = now + datetime.timedelta(hours=1)
+			self.family.cleanup(datetime.timedelta(seconds=30))
+
+		self.assert_(label not in self.family.metric_seen)
+		self.assert_(label not in self.family.metrics)
+
 
 class TestRegistry(unittest.TestCase):
 	def setUp(self):
@@ -165,6 +222,33 @@ class TestRegistry(unittest.TestCase):
 		self.assertEquals(1, len(self.registry))
 		self.assertIs(family, family2)
 
+	def test_invalid_ttl(self):
+		self.assertRaises(ValueError, Registry, ('foo',))
+
+	def test_metric_conflict(self):
+		self.registry[(Counter, 'foo')] = MetricFamily(Counter, 'foo', '')
+
+		try:
+			self.registry[(Counter, 'foo')] = MetricFamily(Gauge, 'foo', '')
+		except ValueError:
+			pass
+		else:
+			assert False, 'did not throw ValueError'
+
+	def test_render(self):
+		counter = self.registry.add_metric(Counter, 'foo', 'test counter')
+		counter.labels({}).inc(1)
+		gauge = self.registry.add_metric(Gauge, 'bar', 'test gauge')
+		gauge.labels({}).inc(1)
+		self.assertEquals(
+			'# HELP bar test gauge\n'
+			'# TYPE bar gauge\n'
+			'bar 1.0\n'
+			'# HELP foo test counter\n'
+			'# TYPE foo counter\n'
+			'foo 1.0\n',
+			self.registry.render()
+		)
 
 if __name__ == '__main__':
 	unittest.main()

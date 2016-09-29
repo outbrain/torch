@@ -3,7 +3,7 @@ from webob.dec import wsgify
 from .prometheus import Registry, Counter, Gauge, Summary, Histogram
 
 class PrometheusMetricCollector(object):
-	def __init__(self, prefix=''):
+	def __init__(self, prefix='', ttl=None):
 		self.routes = {
 			prefix: self.report,
 			prefix+'/': self.report,
@@ -14,7 +14,7 @@ class PrometheusMetricCollector(object):
 			prefix+'/summary': self.summary,
 			prefix+'/histogram': self.histogram
 		}
-		self.metric_registry = Registry()
+		self.metric_registry = Registry(ttl=ttl)
 
 	@wsgify
 	def __call__(self, request):
