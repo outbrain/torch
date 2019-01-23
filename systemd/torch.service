@@ -1,0 +1,20 @@
+[Unit]
+Description=Torch prometheus proxy
+
+[Service]
+ExecStart=/usr/bin/python -m torch
+User=torch
+Restart=always
+
+# Sandboxing:
+PrivateTmp=true
+DevicePolicy=closed
+ProtectSystem=full
+ProtectHome=true
+InaccessibleDirectories=/var /sysroot /run
+ReadOnlyDirectories=/
+PrivateNetwork=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

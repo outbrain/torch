@@ -1,0 +1,8 @@
+[Unit]
+Description=Torch prometheus proxy socket
+
+[Socket]
+ListenStream=/run/torch.sock
+
+[Install]
+WantedBy=sockets.target
